@@ -9,6 +9,7 @@
       :creatures="creatures"
       :selection="selection"
       :selected-creature="selectedCreature"
+      :archive="archive"
       :dense="dense"
       @creature-selected="id => $emit('creature-selected', id)"
     />
@@ -35,6 +36,7 @@
           :folder-id="folder._id"
           :selection="selection"
           :selected-creature="selectedCreature"
+          :archive="archive"
           :dense="dense"
           @creature-selected="id => $emit('creature-selected', id)"
         />
@@ -66,6 +68,7 @@ export default {
       type: String,
       default: undefined,
     },
+    archive: Boolean,
     dense: Boolean,
     nav: Boolean,
   },

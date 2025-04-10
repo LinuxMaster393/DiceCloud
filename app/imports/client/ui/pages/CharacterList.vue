@@ -66,6 +66,24 @@
               add folder
             </v-btn>
           </div>
+          <div 
+            v-if="archiveCreaturesCount"
+            class="layout justify-center mt-10"
+          >
+            <v-subheader>
+              Archived Characters
+            </v-subheader>
+          </div>
+          <v-card 
+            v-if="archiveCreaturesCount"
+            class="mb-4"
+          >
+            <creature-folder-list
+              :creatures="archiveCreaturesWithNoParty"
+              :folders="archiveFolders"
+              archive
+            />
+          </v-card>
           <v-btn
             color="accent"
             fab
@@ -85,6 +103,7 @@
 </template>
 
 <script lang="js">
+import ArchiveCreatureFiles from '/imports/api/creature/archive/ArchiveCreatureFiles';
 import Creatures from '/imports/api/creature/creatures/Creatures';
 import CreatureFolders from '/imports/api/creature/creatureFolders/CreatureFolders';
 import { getUserTier } from '/imports/api/users/patreon/tiers';
@@ -99,6 +118,15 @@ const characterTransform = function (char) {
   char.url = `/character/${char._id}/${getCreatureUrlName(char)}`;
   char.initial = char.name && char.name[0] || '?';
   return char;
+};
+const fileTransform = function (file) {
+  return {
+    _id: file._id,
+    name: file.meta.creatureName,
+    owner: file.userId,
+    creatureId: file.meta.creatureId,
+    initial: file.meta.creatureName && file.meta.creatureName[0] || '?',
+  };
 };
 export default {
   components: {
@@ -115,6 +143,8 @@ export default {
   meteor: {
     $subscribe: {
       'characterList': [],
+      'archivedCreatures': [],
+      'archiveCreatureFiles': [],
     },
     folders() {
       const userId = Meteor.userId();
@@ -171,6 +201,44 @@ export default {
     },
     showImportButton() {
       return !Meteor.settings.public?.disallowCreatureApiImport;
+    },
+    archiveFolders() {
+      const userId = Meteor.userId();
+      let folders =  CreatureFolders.find(
+        {owner: userId},
+        {sort: {left: 1}},
+      ).map(folder => {
+        folder.creatures = ArchiveCreatureFiles.find(
+          {
+            'meta.creatureId': {$in: folder.creatures || []},
+            userId,
+          }, {
+            sort: {'meta.creatureName': 1},
+          }
+        ).map(fileTransform);
+        return folder;
+      });
+      folders = folders.filter(folder => !!folder.creatures.length);
+      return folders;
+    },
+    archiveCreaturesWithNoParty() {
+      var userId = Meteor.userId();
+      var charArrays = CreatureFolders.find({owner: userId}).map(p => p.creatures);
+      var folderChars = uniq(flatten(charArrays));
+      return ArchiveCreatureFiles.find(
+        {
+          'meta.creatureId': {$nin: folderChars},
+          userId,
+        }, {
+          sort: {'meta.creatureName': 1},
+        }
+      ).map(fileTransform);
+    },
+    archiveCreaturesCount() {
+      var userId = Meteor.userId();
+      return ArchiveCreatureFiles.find(
+        { userId },
+      ).count() > 0;
     }
   },
   methods: {

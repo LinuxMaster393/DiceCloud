@@ -9,23 +9,34 @@
     handle=".handle"
     @change="draggableChange"
   >
-    <creature-list-tile
-      v-for="creature in dataCreatures"
-      :key="creature._id"
-      class="creature"
-      :model="creature"
-      :selection="selection"
-      :is-selected="selectedCreature === creature._id || selectedCreatures.has(creature._id)"
-      v-bind="selection ? {} : {to: creature.url}"
-      :dense="dense"
-      :data-id="dense ? undefined : creature._id"
-      @click="$emit('creature-selected', creature._id)"
-    />
+    <div v-for="creature in dataCreatures">
+      <creature-list-tile
+        v-if="!archive"
+        :key="creature._id"
+        class="creature"
+        :model="creature"
+        :selection="selection"
+        :is-selected="selectedCreature === creature._id || selectedCreatures.has(creature._id)"
+        v-bind="selection ? {} : {to: creature.url}"
+        :dense="dense"
+        :data-id="dense ? undefined : creature._id"
+        @click="$emit('creature-selected', creature._id)"
+      />
+      <creature-archive-list-tile
+        v-else
+        :key="creature.id"
+        class="creature"
+        :model="creature"
+        :dense="dense"
+        :data-id="dense ? undefined : creature._id"
+      />
+    </div>
   </draggable>
 </template>
 
 <script lang="js">
   import CreatureListTile from '/imports/client/ui/creature/creatureList/CreatureListTile.vue';
+  import CreatureArchiveListTile from '/imports/client/ui/creature/creatureList/CreatureArchiveListTile.vue';
   import draggable from 'vuedraggable';
   import moveCreatureToFolder from '/imports/api/creature/creatureFolders/methods.js/moveCreatureToFolder';
   import {snackbar} from '/imports/client/ui/components/snackbars/SnackbarQueue';
@@ -33,6 +44,7 @@
   export default {
     components: {
       CreatureListTile,
+      CreatureArchiveListTile,
       draggable,
     },
     props: {
@@ -53,6 +65,7 @@
         type: Set,
         default: () => new Set(),
       },
+      archive: Boolean,
       dense: Boolean,
     },
     data(){return {
