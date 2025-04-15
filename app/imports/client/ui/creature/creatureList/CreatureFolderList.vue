@@ -10,7 +10,7 @@
       :selection="selection"
       :selected-creature="selectedCreature"
       :dense="dense"
-      @creature-selected="id => $emit('creature-selected', id)"
+      @creature-selected="creature => $emit('creature-selected', creature)"
     />
     <v-slide-x-transition
       group
@@ -36,7 +36,7 @@
           :selection="selection"
           :selected-creature="selectedCreature"
           :dense="dense"
-          @creature-selected="id => $emit('creature-selected', id)"
+          @creature-selected="creature => $emit('creature-selected', creature)"
         />
       </v-list-group>
     </v-slide-x-transition>

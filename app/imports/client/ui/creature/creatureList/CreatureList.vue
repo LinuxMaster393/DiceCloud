@@ -11,7 +11,7 @@
   >
     <creature-list-tile
       v-for="creature in dataCreatures"
-      :key="creature._id"
+      :key="!!creature.isAutoArchive ? creature._id + 'Archive' : creature._id"
       class="creature"
       :model="creature"
       :selection="selection"
@@ -19,7 +19,7 @@
       v-bind="selection ? {} : {to: creature.url}"
       :dense="dense"
       :data-id="dense ? undefined : creature._id"
-      @click="$emit('creature-selected', creature._id)"
+      @click="$emit('creature-selected', creature)"
     />
   </draggable>
 </template>
@@ -55,21 +55,21 @@
       },
       dense: Boolean,
     },
-    data(){return {
+    data() { return {
       dataCreatures: [],
     }},
-    watch:{
+    watch: {
       creatures(newValue){
         this.dataCreatures = newValue;
       },
     },
-    mounted(){
+    mounted() {
       this.dataCreatures = this.creatures;
     },
     methods: {
       draggableChange({added, moved}){
         let event = added || moved;
-        if (event){
+        if (event) {
           let doc = event.element;
           moveCreatureToFolder.call({
             creatureId: doc._id,
@@ -83,7 +83,7 @@
           });
         }
       },
-      selectionChange(index){
+      selectionChange(index) {
         this.$emit('creatureSelected', this.dataCreatures[index]._id)
       },
     }

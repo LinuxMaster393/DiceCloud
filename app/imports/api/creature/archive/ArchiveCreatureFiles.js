@@ -56,10 +56,6 @@ let archiveSchema = new SimpleSchema({
     type: Object,
     blackbox: true,
   },
-  auto: {
-    type: Boolean,
-    optional: true,
-  },
 });
 
 export default ArchiveCreatureFiles;

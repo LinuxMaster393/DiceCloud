@@ -27,8 +27,8 @@
       selection
       :creatures="mode === 'archive' ? CreaturesWithNoParty : archiveCreaturesWithNoParty"
       :folders="mode === 'archive' ? folders : archivefolders"
-      :selected-creature="selectedCreature"
-      @creature-selected="id => selectedCreature = id"
+      :selected-creature="!!selectedCreature ? selectedCreature._id : null"
+      @creature-selected="creature => selectedCreature = creature"
     />
     <v-spacer slot="actions" />
     <v-btn
@@ -64,22 +64,31 @@ import CreatureFolderList from '/imports/client/ui/creature/creatureList/Creatur
 import ArchiveCreatureFiles from '/imports/api/creature/archive/ArchiveCreatureFiles';
 import archiveCreatureToFile from '/imports/api/creature/archive/methods/archiveCreatureToFile';
 import restoreCreatureFromFile from '/imports/api/creature/archive/methods/restoreCreatureFromFile';
+import removeAutoArchiveFlag from '/imports/api/creature/archive/methods/removeAutoArchiveFlag';
 import { snackbar } from '/imports/client/ui/components/snackbars/SnackbarQueue';
 import { uniq, flatten } from 'lodash';
 import { characterSlotsRemaining } from '/imports/api/creature/creatures/methods/assertHasCharacterSlots';
 
-const characterTransform = function(char){
-  char.url = `/character/${char._id}/${char.urlName || '-'}`;
-  char.initial = char.name && char.name[0] || '?';
-  return char;
-};
-
-const fileTransform = function(file){
+const characterTransform = function(char) {
   return {
-    _id: file._id,
+    _id: char._id,
+    name: char.name,
+    owner: char.owner,
+    initial: char.name && char.name[0] || '?',
+    alignment: char.alignment,
+    gender: char.gender,
+    race: char.race,
+    isAutoArchive: false,
+  };
+};
+const fileTransform = function(file) {
+  return {
+    _id: file.meta.creatureId,
     name: file.meta.creatureName,
     owner: file.userId,
-    creatureId: file.meta.creatureId,
+    initial: file.meta.creatureName && file.meta.creatureName[0] || '?',
+    isAutoArchive: !!file.meta.auto,
+    archiveId: file._id,
   };
 }
 
@@ -120,18 +129,29 @@ export default {
     archiveAction(){
       if (!this.selectedCreature) return;
       this.archiveActionLoading = true;
-      if (this.mode === 'archive'){
-        archiveCreatureToFile.call({
-          creatureId: this.selectedCreature,
-        }, error => {
-          this.archiveActionLoading = false;
-          if (!error) return;
-          console.error(error);
-          snackbar({text: error.reason});
-        });
+      if (this.mode === 'archive') {
+        if (this.selectedCreature.isAutoArchive) {
+          removeAutoArchiveFlag.call({
+            archiveId: this.selectedCreature.archiveId
+          }, error => {
+            this.archiveActionLoading = false;
+            if (!error) return;
+            console.error(error);
+            snackbar({text: error.reason});
+          });
+        } else {
+          archiveCreatureToFile.call({
+            creatureId: this.selectedCreature._id,
+          }, error => {
+            this.archiveActionLoading = false;
+            if (!error) return;
+            console.error(error);
+            snackbar({text: error.reason});
+          });
+        }
       } else if (this.mode === 'restore'){
         restoreCreatureFromFile.call({
-          fileId: this.selectedCreature,
+          fileId: this.selectedCreature.archiveId,
         }, error => {
           this.archiveActionLoading = false;
           if (!error) return;
@@ -151,21 +171,41 @@ export default {
     characterSlots(){
       return characterSlotsRemaining(Meteor.userId());
     },
-    folders(){
+    folders() {
       const userId = Meteor.userId();
       let folders =  CreatureFolders.find(
         {owner: userId, archived: {$ne: true}},
         {sort: {left: 1}},
       ).map(folder => {
-        folder.creatures = Creatures.find(
+        let foundCreatures = Creatures.find(
           {
-            _id: {$in: folder.creatures || []},
+            _id: { $in: folder.creatures || [] },
             owner: userId,
-          }, {
-            sort: {name: 1},
-            fields: creatureFields,
-          }
+          }, 
+          { sort: { name: 1 } }
         ).map(characterTransform);
+        let foundArchives = ArchiveCreatureFiles.find(
+          {
+            'meta.creatureId': { $in: folder.creatures || [] },
+            'meta.auto': true,
+            userId,
+          },
+          { sort: { 'meta.creatureId': 1 } }
+        ).map(fileTransform);
+
+        folder.creatures = foundCreatures.concat(foundArchives).toSorted((a, b) => {
+          if (a.meta) {
+            var nameA = a.meta.creatureId;
+          } else {
+            var nameA = a.name;
+          }
+          if (b.meta) {
+            var nameB = b.meta.creatureId;
+          } else {
+            var nameB = b.name;
+          }
+          return nameA.localeCompare(nameB);
+        });
         return folder;
       });
       folders = folders.filter(folder => !!folder.creatures.length);
@@ -173,17 +213,36 @@ export default {
     },
     CreaturesWithNoParty() {
       var userId = Meteor.userId();
-      var charArrays = CreatureFolders.find({owner: userId}).map(p => p.creatures);
+      var charArrays = CreatureFolders.find({ owner: userId }).map(p => p.creatures);
       var folderChars = uniq(flatten(charArrays));
-      return Creatures.find(
+      let foundCreatures = Creatures.find(
         {
-          _id: {$nin: folderChars},
+          _id: { $nin: folderChars },
           owner: userId,
-        }, {
-          sort: {name: 1},
-          fields: creatureFields,
-        }
+        },
+        { sort: { name: 1 } }
       ).map(characterTransform);
+      let foundArchives = ArchiveCreatureFiles.find(
+        {
+          'meta.creatureId': { $nin: folderChars },
+          'meta.auto': true,
+          userId,
+        },
+        { sort: { 'meta.creatureName': 1 } }
+      ).map(fileTransform);
+      return foundCreatures.concat(foundArchives).toSorted((a, b) => {
+          if (a.meta) {
+            var nameA = a.meta.creatureId;
+          } else {
+            var nameA = a.name;
+          }
+          if (b.meta) {
+            var nameB = b.meta.creatureId;
+          } else {
+            var nameB = b.name;
+          }
+          return nameA.localeCompare(nameB);
+        });
     },
     archivefolders(){
       const userId = Meteor.userId();
@@ -194,6 +253,10 @@ export default {
         folder.creatures = ArchiveCreatureFiles.find(
           {
             'meta.creatureId': {$in: folder.creatures || []},
+            $or: [
+              { 'meta.auto': false },
+              { 'meta.auto': { $exists: false } },
+            ],
             userId,
           }, {
             sort: {'meta.creatureName': 1},
@@ -210,7 +273,11 @@ export default {
       var folderChars = uniq(flatten(charArrays));
       return ArchiveCreatureFiles.find(
         {
-          'meta.creatureId': {$nin: folderChars},
+          'meta.creatureId': { $nin: folderChars },
+          $or: [
+            { 'meta.auto': false },
+            { 'meta.auto': { $exists: false } },
+          ],
           userId,
         }, {
           sort: {'meta.creatureName': 1},

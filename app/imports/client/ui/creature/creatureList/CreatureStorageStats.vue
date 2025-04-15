@@ -18,11 +18,12 @@
 <script lang="js">
 import Creatures from '/imports/api/creature/creatures/Creatures';
 import { getUserTier } from '/imports/api/users/patreon/tiers';
+import ArchiveCreatureFiles from '/imports/api/creature/archive/ArchiveCreatureFiles';
 
 export default {
   meteor: {
     creatureCount(){
-      return Creatures.find({owner: Meteor.userId()}).count();
+      return Creatures.find({owner: Meteor.userId()}).count() + ArchiveCreatureFiles.find({ userId: Meteor.userId(), 'meta.auto': true }).count();
     },
     characterSlots(){
       return getUserTier(Meteor.userId()).characterSlots;

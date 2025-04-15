@@ -41,11 +41,11 @@ export const archiveCreature = Meteor.wrapAsync(function archiveCreatureFn(creat
     fileName: `${archive.creature.name || archive.creature._id}.json`,
     type: 'application/json',
     userId: archive.creature.owner,
-    auto: !!autoArchive,
     meta: {
       schemaVersion: SCHEMA_VERSION,
       creatureId: archive.creature._id,
       creatureName: archive.creature.name,
+      auto: !!autoArchive,
     },
   }, (error, fileRef) => {
     if (error) {
