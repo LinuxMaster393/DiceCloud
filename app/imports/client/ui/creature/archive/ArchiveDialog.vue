@@ -78,6 +78,7 @@ const characterTransform = function(char) {
     alignment: char.alignment,
     gender: char.gender,
     race: char.race,
+    avatarPicture: char.avatarPicture,
     isAutoArchive: false,
   };
 };
@@ -87,6 +88,10 @@ const fileTransform = function(file) {
     name: file.meta.creatureName,
     owner: file.userId,
     initial: file.meta.creatureName && file.meta.creatureName[0] || '?',
+    alignment: file.meta.creatureAlignment,
+    gender: file.meta.creatureGender,
+    race: file.meta.creatureRace,
+    avatarPicture: file.meta.creatureAvatarPicture,
     isAutoArchive: !!file.meta.auto,
     archiveId: file._id,
   };

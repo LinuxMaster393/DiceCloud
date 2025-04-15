@@ -106,6 +106,7 @@ const characterTransform = function (char) {
     alignment: char.alignment,
     gender: char.gender,
     race: char.race,
+    avatarPicture: char.avatarPicture,
     isAutoArchive: false,
   };
 };
@@ -117,6 +118,10 @@ const fileTransform = function (file) {
     owner: file.userId,
     url: `/character/${file.meta.creatureId}/${getCreatureUrlName({name: file.meta.creatureName})}?archiveId=${file._id}`,
     initial: file.meta.creatureName && file.meta.creatureName[0] || '?',
+    alignment: file.meta.creatureAlignment,
+    gender: file.meta.creatureGender,
+    race: file.meta.creatureRace,
+    avatarPicture: file.meta.creatureAvatarPicture,
     isAutoArchive: !!file.meta.auto,
     archiveId: file._id,
   };

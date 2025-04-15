@@ -45,6 +45,10 @@ export const archiveCreature = Meteor.wrapAsync(function archiveCreatureFn(creat
       schemaVersion: SCHEMA_VERSION,
       creatureId: archive.creature._id,
       creatureName: archive.creature.name,
+      creatureAlignment: archive.creature.alignment,
+      creatureGender: archive.creature.gender,
+      creatureRace: archive.creature.race,
+      creatureAvatarPicture: archive.creature.avatarPicture,
       auto: !!autoArchive,
     },
   }, (error, fileRef) => {
